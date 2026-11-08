@@ -14,6 +14,9 @@ test = pd.read_csv("data/fraudTest.csv")
 X_train, y_train = build_features(train), train["is_fraud"]
 X_test, y_test = build_features(test), test["is_fraud"]
 
+# only ~0.5% of rows are fraud, so give fraud rows more weight
+ratio = (y_train == 0).sum() / (y_train == 1).sum()
+
 prep = ColumnTransformer(
     [("cat", OneHotEncoder(handle_unknown="ignore"), CATEGORICAL)],
     remainder="passthrough",
@@ -21,7 +24,8 @@ prep = ColumnTransformer(
 
 model = Pipeline([
     ("prep", prep),
-    ("xgb", XGBClassifier(n_estimators=300, max_depth=6, learning_rate=0.1, eval_metric="aucpr")),
+    ("xgb", XGBClassifier(n_estimators=300, max_depth=6, learning_rate=0.1,
+                          scale_pos_weight=ratio, eval_metric="aucpr")),
 ])
 model.fit(X_train, y_train)
 
