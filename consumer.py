@@ -9,6 +9,7 @@ BOOTSTRAP = os.getenv("KAFKA_BOOTSTRAP", "localhost:9092")
 API_URL = os.getenv("API_URL", "http://localhost:8000")
 DB_PATH = os.getenv("DB_PATH", "data/scored.db")
 
+os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
 conn = sqlite3.connect(DB_PATH)
 conn.execute("""
     CREATE TABLE IF NOT EXISTS scored (
@@ -34,7 +35,14 @@ consumer = KafkaConsumer(
 
 for msg in consumer:
     tx = msg.value
-    result = requests.post(f"{API_URL}/score", json=tx, timeout=5).json()
+    try:
+        resp = requests.post(f"{API_URL}/score", json=tx, timeout=5)
+        resp.raise_for_status()
+        result = resp.json()
+    except requests.RequestException as e:
+        # don't crash the whole consumer because of one bad call
+        print("could not score", tx.get("trans_num"), "-", e)
+        continue
 
     conn.execute(
         """INSERT OR IGNORE INTO scored
