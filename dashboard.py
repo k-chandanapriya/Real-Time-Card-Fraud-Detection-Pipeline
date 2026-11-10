@@ -47,5 +47,8 @@ def live_view():
         st.subheader("Alerts by category")
         st.bar_chart(alerts.category.value_counts())
 
+    st.subheader("Fraud score, last 200 transactions")
+    st.line_chart(df.tail(200).set_index("id")["fraud_probability"])
+
 
 live_view()
