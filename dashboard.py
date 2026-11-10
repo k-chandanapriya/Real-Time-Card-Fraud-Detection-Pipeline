@@ -34,5 +34,18 @@ def live_view():
     c3.metric("Alert rate", f"{len(alerts) / len(df):.1%}")
     c4.metric("Real fraud caught", f"{caught} / {int(df.actual_fraud.sum())}")
 
+    left, right = st.columns([2, 1])
+    with left:
+        st.subheader("Latest alerts")
+        latest = alerts.sort_values("id", ascending=False).head(20)
+        st.dataframe(
+            latest[["ts", "merchant", "category", "amt", "fraud_probability", "actual_fraud"]],
+            width="stretch",
+            hide_index=True,
+        )
+    with right:
+        st.subheader("Alerts by category")
+        st.bar_chart(alerts.category.value_counts())
+
 
 live_view()
