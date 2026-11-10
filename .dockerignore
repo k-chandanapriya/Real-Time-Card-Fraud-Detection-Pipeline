@@ -1,0 +1,6 @@
+# the csvs are big, they get mounted instead
+data/
+venv/
+__pycache__/
+.git/
+.pytest_cache/
