@@ -15,3 +15,49 @@ services:
       KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
       KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+
+  api:
+    build: .
+    command: uvicorn app:app --host 0.0.0.0 --port 8000
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./models:/app/models
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 5s
+      retries: 10
+
+  consumer:
+    build: .
+    command: python consumer.py
+    environment:
+      KAFKA_BOOTSTRAP: kafka:29092
+      API_URL: http://api:8000
+    volumes:
+      - ./data:/app/data
+    depends_on:
+      kafka:
+        condition: service_started
+      api:
+        condition: service_healthy
+    restart: on-failure  # keeps retrying until kafka is ready
+
+  producer:
+    build: .
+    command: python producer.py
+    environment:
+      KAFKA_BOOTSTRAP: kafka:29092
+    volumes:
+      - ./data:/app/data
+    depends_on: [kafka, consumer]
+    restart: on-failure
+
+  dashboard:
+    build: .
+    command: streamlit run dashboard.py --server.address 0.0.0.0
+    ports:
+      - "8501:8501"
+    volumes:
+      - ./data:/app/data
+      - ./models:/app/models
